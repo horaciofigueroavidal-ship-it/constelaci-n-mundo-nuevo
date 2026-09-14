@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Constelación Mundo Nuevo</title>
+<meta name="description" content="Grafo interactivo de autores, conceptos y números de la revista Mundo Nuevo (1966–1968), con enlaces a los PDF originales.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%8C%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Piazzolla:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="assets/d3.min.js"></script>
+<style>
+:root{
+  --page:#f9f9f7;
+  --surface:#fcfcfb;
+  --surface-2:#f2f1ec;
+  --ink:#0b0b0b;
+  --ink-2:#52514e;
+  --muted:#898781;
+  --hairline:#e1e0d9;
+  --border:rgba(11,11,11,0.10);
+  --link-line:#c3c2b7;
+  --c-concepto:#2a78d6;
+  --c-autor:#eb6834;
+  --c-index:#1baf7a;
+  --focus:#2a78d6;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#0d0d0d;
+    --surface:#1a1a19;
+    --surface-2:#212120;
+    --ink:#ffffff;
+    --ink-2:#c3c2b7;
+    --muted:#8f8d87;
+    --hairline:#2c2c2a;
+    --border:rgba(255,255,255,0.12);
+    --link-line:#3a3a38;
+    --c-concepto:#3987e5;
+    --c-autor:#d95926;
+    --c-index:#199e70;
+    --focus:#6db0ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0d0d0d;
+  --surface:#1a1a19;
+  --surface-2:#212120;
+  --ink:#ffffff;
+  --ink-2:#c3c2b7;
+  --muted:#8f8d87;
+  --hairline:#2c2c2a;
+  --border:rgba(255,255,255,0.12);
+  --link-line:#3a3a38;
+  --c-concepto:#3987e5;
+  --c-autor:#d95926;
+  --c-index:#199e70;
+  --focus:#6db0ff;
+  color-scheme: dark;
+}
+
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:var(--page);
+  color:var(--ink);
+  font-family:"Piazzolla", Georgia, "Times New Roman", serif;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+}
+[hidden]{display:none !important;}
+img{max-width:100%;}
+::selection{background:var(--c-concepto);color:#fff;}
+
+a{color:inherit;}
+
+.skip{position:absolute;left:-999px;top:0;}
+.skip:focus{left:16px;top:16px;z-index:100;background:var(--surface);padding:8px 12px;border-radius:4px;border:1px solid var(--border);}
+
+button, input{font:inherit;color:inherit;}
+
+/* ---------- masthead ---------- */
+header.masthead{
+  padding:28px 24px 18px;
+  border-bottom:1px solid var(--hairline);
+  background:var(--page);
+}
+.masthead-inner{
+  max-width:1180px;
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.eyebrow{
+  font-family:"IBM Plex Mono", ui-monospace, monospace;
+  font-size:11px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+h1.title{
+  font-family:"Fraunces", Georgia, serif;
+  font-weight:600;
+  font-size:clamp(1.9rem, 4.4vw, 3rem);
+  line-height:1.05;
+  margin:0;
+  text-wrap:balance;
+  letter-spacing:-0.01em;
+}
+h1.title em{
+  font-style:italic;
+  font-weight:500;
+  color:var(--c-index);
+}
+p.dek{
+  font-size:15px;
+  color:var(--ink-2);
+  max-width:62ch;
+  margin:0;
+  font-style:italic;
+}
+
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px 14px;
+  margin-top:4px;
+}
+.seg{
+  display:inline-flex;
+  border:1px solid var(--border);
+  border-radius:999px;
+  padding:3px;
+  gap:2px;
+  background:var(--surface);
+}
+.seg button{
+  border:0;
+  background:transparent;
+  color:var(--ink-2);
+  padding:6px 14px;
+  border-radius:999px;
+  font-family:"IBM Plex Mono", monospace;
+  font-size:12px;
+  letter-spacing:.03em;
+  cursor:pointer;
+}
+.seg button[aria-pressed="true"]{
+  background:var(--ink);
+  color:var(--page);
+}
+.seg button:focus-visible, .chip:focus-visible, .idx-item:focus-visible, .conn:focus-visible, input:focus-visible, .p-pdflink:focus-visible {
+  outline:2px solid var(--focus);
+  outline-offset:2px;
+}
+
+.legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  border:1px solid var(--border);
+  background:var(--surface);
+  color:var(--ink-2);
+  padding:6px 12px 6px 10px;
+  border-radius:999px;
+  font-family:"IBM Plex Mono", monospace;
+  font-size:12px;
+  cursor:pointer;
+  transition:opacity .15s;
+}
+.chip .dot{width:9px;height:9px;border-radius:50%;flex:none;}
+.chip[aria-pressed="false"]{opacity:.4;}
+.chip .n{color:var(--muted);}
+
+.searchwrap{position:relative;margin-left:auto;}
+.searchwrap input{
+  width:220px;
+  max-width:44vw;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:999px;
+  padding:7px 14px;
+  font-family:"IBM Plex Mono", monospace;
+  font-size:12px;
+  color:var(--ink);
+}
+.searchwrap input::placeholder{color:var(--muted);}
+.suggest{
+  position:absolute;
+  top:calc(100% + 6px);
+  left:0;right:0;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;
+  z-index:20;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+}
+.suggest button{
+  display:block;
+  width:100%;
+  text-align:left;
+  border:0;
+  background:transparent;
+  padding:8px 12px;
+  font-family:"IBM Plex Mono", monospace;
+  font-size:12.5px;
+  color:var(--ink);
+  cursor:pointer;
+  border-bottom:1px solid var(--hairline);
+}
+.suggest button:last-child{border-bottom:0;}
+.suggest button:hover, .suggest button:focus-visible{background:var(--surface-2);}
+.suggest .g{color:var(--muted);margin-left:6px;font-size:10.5px;}
+
+.hint{
+  font-family:"IBM Plex Mono", monospace;
+  font-size:11px;
+  color:var(--muted);
+  letter-spacing:.01em;
+}
+
+/* ---------- stage ---------- */
+main{
+  position:relative;
+  flex:1;
+  min-height:0;
+}
+#stage{
+  position:relative;
+  height: max(520px, calc(100vh - 236px));
+  overflow:hidden;
+  background:var(--surface);
+}
+#stage.hide{display:none;}
+#stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+#stage svg{position:absolute;inset:0;display:block;width:100%;height:100%;cursor:grab;}
+#stage svg:active{cursor:grabbing;}
+
+.node-label{
+  font-family:"IBM Plex Mono", monospace;
+  font-size:10px;
+  fill:var(--ink-2);
+  pointer-events:none;
+  paint-order:stroke;
+  stroke:var(--surface);
+  stroke-width:3px;
+  stroke-linejoin:round;
+}
+.link-line{stroke:var(--link-line);stroke-opacity:.55;}
+.node-dot{stroke:var(--surface);stroke-width:1px;cursor:pointer;}
+.dim{opacity:.1;}
+.active-link{stroke-opacity:.9 !important;}
+
+#tooltip{
+  position:fixed;
+  pointer-events:none;
+  background:var(--ink);
+  color:var(--page);
+  font-family:"IBM Plex Mono", monospace;
+  font-size:11.5px;
+  padding:5px 9px;
+  border-radius:5px;
+  transform:translate(-50%,-130%);
+  white-space:nowrap;
+  z-index:30;
+  opacity:0;
+  transition:opacity .1s;
+}
+
+/* ---------- panel ---------- */
+#panel{
+  position:absolute;
+  top:0;right:0;
+  height:100%;
+  width:380px;
+  max-width:88vw;
+  background:var(--surface);
+  border-left:1px solid var(--hairline);
+  transform:translateX(102%);
+  transition:transform .28s ease;
+  display:flex;
+  flex-direction:column;
+  z-index:25;
+}
+#panel.open{transform:translateX(0);}
+#panel .p-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  padding:18px 18px 12px;
+  border-bottom:1px solid var(--hairline);
+}
+#panel .p-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-family:"IBM Plex Mono", monospace;
+  font-size:10.5px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--ink-2);
+}
+#panel .p-badge .dot{width:8px;height:8px;border-radius:50%;}
+#panel .p-close{
+  border:0;background:transparent;color:var(--muted);
+  font-size:18px;line-height:1;cursor:pointer;padding:4px;
+}
+#panel .p-body{padding:14px 18px 22px;overflow-y:auto;}
+#panel h2{
+  font-family:"Fraunces", Georgia, serif;
+  font-size:22px;
+  font-weight:600;
+  margin:2px 0 10px;
+  text-wrap:balance;
+}
+.p-pdflink{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  text-decoration:none;
+  font-family:"IBM Plex Mono", monospace;
+  font-size:11.5px;
+  letter-spacing:.03em;
+  border:1px solid var(--border);
+  background:var(--surface-2);
+  padding:7px 12px;
+  border-radius:8px;
+  margin:0 0 16px;
+  color:var(--ink);
+}
+.p-pdflink:hover{border-color:var(--c-index);color:var(--c-index);}
+#panel .p-summary{
+  font-size:14.5px;
+  line-height:1.55;
+  color:var(--ink-2);
+  margin:0 0 18px;
+}
+#panel .p-section-title{
+  font-family:"IBM Plex Mono", monospace;
+  font-size:10.5px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin:0 0 8px;
+}
+.connlist{list-style:none;margin:0 0 6px;padding:0;display:flex;flex-direction:column;gap:5px;}
+.conn{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  text-align:left;
+  border:1px solid var(--border);
+  background:var(--surface-2);
+  padding:7px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:13px;
+}
+.conn:hover{border-color:var(--ink-2);}
+.conn .dot{width:7px;height:7px;border-radius:50%;flex:none;}
+.conn .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.conn .g{font-family:"IBM Plex Mono", monospace;font-size:9.5px;color:var(--muted);flex:none;}
+
+/* ---------- index view ---------- */
+#indexView{
+  max-width:1180px;
+  margin:0 auto;
+  padding:28px 24px 60px;
+  display:none;
+}
+#indexView.show{display:block;}
+.idx-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:36px;
+}
+@media (max-width:640px){.idx-grid{grid-template-columns:1fr;}}
+.idx-col h3{
+  font-family:"IBM Plex Mono", monospace;
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--muted);
+  border-bottom:1px solid var(--hairline);
+  padding-bottom:8px;
+  margin:0 0 10px;
+}
+.idx-list{list-style:none;margin:0;padding:0;}
+.idx-item{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  width:100%;
+  text-align:left;
+  border:0;
+  border-bottom:1px solid var(--hairline);
+  background:transparent;
+  padding:11px 2px;
+  cursor:pointer;
+}
+.idx-item .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.idx-item .t{
+  font-family:"Fraunces", Georgia, serif;
+  font-size:16px;
+  flex:1;
+}
+.idx-item .n{font-family:"IBM Plex Mono", monospace;font-size:11px;color:var(--muted);}
+.idx-note{margin-top:26px;font-size:13px;color:var(--ink-2);font-family:"IBM Plex Mono",monospace;}
+
+/* ---------- footer ---------- */
+footer{
+  padding:14px 24px;
+  border-top:1px solid var(--hairline);
+  font-family:"IBM Plex Mono", monospace;
+  font-size:11px;
+  color:var(--muted);
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px 16px;
+  justify-content:space-between;
+}
+
+@media (max-width:720px){
+  header.masthead{padding:20px 16px 14px;}
+  #panel{width:100%;max-width:100%;left:0;right:0;top:auto;bottom:0;height:auto;max-height:72vh;transform:translateY(102%);border-left:0;border-top:1px solid var(--hairline);border-radius:16px 16px 0 0;}
+  #panel.open{transform:translateY(0);}
+  .searchwrap{margin-left:0;order:10;width:100%;}
+  .searchwrap input{width:100%;max-width:100%;}
+  footer{padding:12px 16px;}
+}
+
+@media (prefers-reduced-motion: reduce){
+  #panel{transition:none;}
+}
+</style>
+</head>
+<body>
+
+<span class="skip">Constelación Mundo Nuevo</span>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="eyebrow">Proyecto FAI · Revista cultural, 1966–1968</div>
+    <h1 class="title">Constelación <em>Mundo Nuevo</em></h1>
+    <p class="dek">El grafo de la bóveda de Obsidian — autores, conceptos, números de la revista y artículos citados, con enlace directo a cada PDF.</p>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Vista">
+        <button type="button" data-view="graph" aria-pressed="true">Grafo</button>
+        <button type="button" data-view="index" aria-pressed="false">Índice</button>
+      </div>
+      <div class="legend" role="group" aria-label="Filtrar por tipo" id="legend"></div>
+      <div class="searchwrap">
+        <input type="text" id="search" placeholder="Buscar una estrella…" autocomplete="off" aria-label="Buscar autor, concepto o número">
+        <div class="suggest" id="suggest" hidden></div>
+      </div>
+    </div>
+    <div class="hint" id="hint">Hacé clic en una estrella para abrir su ficha y su PDF · arrastrá para reordenar · desplazá para acercar</div>
+  </div>
+</header>
+
+<main>
+  <div id="stage">
+    <canvas id="starfield" aria-hidden="true"></canvas>
+    <svg id="graph" role="img" aria-label="Grafo interactivo de autores, conceptos y números de Mundo Nuevo"></svg>
+    <div id="tooltip"></div>
+    <aside id="panel" aria-live="polite">
+      <div class="p-head">
+        <span class="p-badge"><span class="dot" id="p-dot"></span><span id="p-type">—</span></span>
+        <button class="p-close" id="p-close" aria-label="Cerrar ficha">✕</button>
+      </div>
+      <div class="p-body">
+        <h2 id="p-title">—</h2>
+        <a class="p-pdflink" id="p-pdf" href="#" target="_blank" rel="noopener" hidden>Abrir PDF ↗</a>
+        <p class="p-summary" id="p-summary"></p>
+        <div class="p-section-title" id="p-conn-title">Conexiones</div>
+        <ul class="connlist" id="p-conn"></ul>
+      </div>
+    </aside>
+  </div>
+  <section id="indexView" aria-label="Índice de autores y conceptos">
+    <div class="idx-grid">
+      <div class="idx-col">
+        <h3>Autores</h3>
+        <ul class="idx-list" id="idx-autores"></ul>
+      </div>
+      <div class="idx-col">
+        <h3>Conceptos</h3>
+        <ul class="idx-list" id="idx-conceptos"></ul>
+      </div>
+    </div>
+    <p class="idx-note" id="idx-note"></p>
+  </section>
+</main>
+
+<footer>
+  <span id="stats">— nodos · — conexiones</span>
+  <span>Datos: <code>BBDD Revista Mundo Nuevo.xlsx</code> y la bóveda de Obsidian del Proyecto FAI · PDF en <code>documentos/</code></span>
+</footer>
+
+<script>
+const GRAPH_DATA = {"nodes": [{"id": "Revista Mundo Nuevo.md", "label": "Revista Mundo Nuevo", "group": "hub", "path": "Revista Mundo Nuevo.md", "degree": 2, "summary": "Nota central del Proyecto FAI dedicado a *Mundo Nuevo* (1966–1968), la revista cultural dirigida por Emir Rodríguez Monegal y financiada por el Congreso por la Libertad de la Cultura, epicentro de la difusión del *boom* latinoamericano y de la Guerra Fría cultural del período. Este es el punto de entrada a las dos bóvedas del proyecto derivadas de la base de datos (`BBDD Revista Mundo Nuevo.xlsx`) y de los 29 números digitalizados en `REVISTAS/`."}, {"id": "AUTORES/Carlos Fuentes.md", "label": "Carlos Fuentes", "group": "autor", "path": "AUTORES/Carlos Fuentes.md", "degree": 9, "summary": "Novelista mexicano (1928–2012), una de las figuras centrales del *boom* (*La muerte de Artemio Cruz*, *Cambio de piel*), de trayectoria cosmopolita entre México, Europa y Estados Unidos, y voz de una izquierda crítica de la ortodoxia soviética. En *Mundo Nuevo* cubre los principales ejes temáticos de la revista —lenguaje, cosmopolitismo y Guerra Fría cultural— a través de entrevistas, un fragmento novelístico y un ensayo que consagra a Cortázar."}, {"id": "AUTORES/Cristián Huneeus.md", "label": "Cristián Huneeus", "group": "autor", "path": "AUTORES/Cristián Huneeus.md", "degree": 8, "summary": "Narrador y ensayista chileno (1937–1985), más tarde también guionista y académico, figura de una generación literaria chilena posterior al criollismo. En *Mundo Nuevo* publica cuentos propios, reseñas críticas y notas sobre la nueva poesía chilena, dando espacio a una generación emergente en Chile más allá del boom novelístico continental."}, {"id": "AUTORES/César Fernández Moreno.md", "label": "César Fernández Moreno", "group": "autor", "path": "AUTORES/César Fernández Moreno.md", "degree": 8, "summary": "Poeta y ensayista argentino (1919–1985), hijo del poeta Baldomero Fernández Moreno y más tarde vinculado a organismos culturales internacionales como la UNESCO. En *Mundo Nuevo* firma estudios y testimonios que trazan genealogías y tradiciones nacionales —Martínez Estrada, la ciencia ficción argentina, la poesía del país— mostrando un interés constante por el debate entre cosmopolitismo y localismo."}, {"id": "AUTORES/Elena de la Souchère.md", "label": "Elena de la Souchère", "group": "autor", "path": "AUTORES/Elena de la Souchère.md", "degree": 7, "summary": "Periodista e historiadora francesa especializada en España y América Latina. En *Mundo Nuevo* firma la sección de análisis político «Brújula»: crónicas sobre la coyuntura política latinoamericana —elecciones dominicanas, intervención militar en Brasil, guerrillas en Bolivia y Guatemala— y un ensayo sobre el riesgo de que el continente quede reducido a terreno de disputa entre las grandes potencias, aportando la mirada más sistemáticamente geopolítica sobre la Guerra Fría continental dentro de la revista."}, {"id": "AUTORES/Emir Rodríguez Monegal.md", "label": "Emir Rodríguez Monegal", "group": "autor", "path": "AUTORES/Emir Rodríguez Monegal.md", "degree": 24, "summary": "Crítico, ensayista y profesor uruguayo (1921–1985), fundador y primer director de *Mundo Nuevo* entre 1966 y 1968; antes había dirigido el semanario *Marcha* y más tarde enseñaría en Yale, consolidándose como uno de los críticos más influyentes en la consagración internacional del *boom* y de la nueva novela latinoamericana. Es, por lejos, el autor más prolífico de la revista: firma los editoriales que fijan su línea, crónicas de congresos literarios, extensos ensayos críticos sobre casi todos los protagonistas del *boom* y, en dos piezas centrales, la defensa pública de la autonomía de *Mundo Nuevo* frente al escándalo del financiamiento de la CIA y, finalmente, su propia renuncia a la dirección."}, {"id": "AUTORES/Guillermo Cabrera Infante.md", "label": "Guillermo Cabrera Infante", "group": "autor", "path": "AUTORES/Guillermo Cabrera Infante.md", "degree": 9, "summary": "Novelista y crítico cubano (1929–2005), autor de *Tres tristes tigres*, funcionario cultural de la Revolución cubana hasta su ruptura con el régimen castrista en 1965 y su posterior exilio en Londres; una de las grandes figuras del *boom*. En *Mundo Nuevo* combina la ficción con el ensayo sobre cultura de masas y, sobre todo, ofrece una extensa entrevista sobre su propia novela en la que denuncia la censura cultural cubana, convirtiéndose en la voz más elocuente contra el dogmatismo del «realismo socialista» dentro de la revista."}, {"id": "AUTORES/Ignacio Iglesias.md", "label": "Ignacio Iglesias", "group": "autor", "path": "AUTORES/Ignacio Iglesias.md", "degree": 10, "summary": "Periodista y ensayista español, militante del POUM durante la Guerra Civil y exiliado en Francia tras la derrota republicana, voz del socialismo antiestalinista español. En *Mundo Nuevo* ejerce sobre todo la crítica de ideas y la reseña política: analiza el liberalismo y el marxismo españoles, sigue de cerca la censura franquista y el mercado editorial peninsular y, hacia el final de su colaboración, fustiga con dureza la «imitación servil» de ciertas modas vanguardistas entre los narradores jóvenes, dejando ver una mirada crítica de izquierda no comunista sobre la nueva narrativa."}, {"id": "AUTORES/Joaquín Casalduero.md", "label": "Joaquín Casalduero", "group": "autor", "path": "AUTORES/Joaquín Casalduero.md", "degree": 4, "summary": "Filólogo y crítico literario español (1903–1990), exiliado tras la Guerra Civil, especialista de referencia en Cervantes, Galdós y los clásicos españoles, con una larga trayectoria en universidades estadounidenses. En *Mundo Nuevo* aparece con un registro doble y poco habitual para un filólogo de su generación: un ensayo crítico sobre la vigencia de Galdós frente a la modernidad tecnológica, y un breve conjunto de nueve poemas íntimos publicados en el número 13, centrados en el amor, la muerte y el sinsentido, ajenos a los debates político-literarios que dominan el resto de la revista."}, {"id": "AUTORES/Julio Ortega.md", "label": "Julio Ortega", "group": "autor", "path": "AUTORES/Julio Ortega.md", "degree": 15, "summary": "Crítico y narrador peruano (n. 1942), muy joven al momento de colaborar en *Mundo Nuevo*, donde publica sus primeros textos de crítica antes de consolidarse como uno de los grandes estudiosos académicos de la literatura latinoamericana. En la revista firma sobre todo reseñas y ensayos breves: panoramas de la crítica y la narrativa peruanas, balances de la nueva poesía hispanoamericana y una defensa entusiasta de la renovación verbal del *boom*, revelando un interés sostenido por la vanguardia poética y el compromiso social de los escritores jóvenes."}, {"id": "AUTORES/Mapa de autores.md", "label": "Mapa de autores", "group": "mapa", "path": "AUTORES/Mapa de autores.md", "degree": 12, "summary": "Índice de los diez autores individuales que más veces firman en los números de *Mundo Nuevo* relevados, según el recuento de la base de datos del proyecto (`BBDD Revista Mundo Nuevo.xlsx`), excluidas las notas sin firma y las atribuidas genéricamente a la «Editorial». Cada nota contiene una semblanza —quién es y qué temas trata en la revista— y la lista completa de sus artículos, con enlaces directos a los PDF de los números correspondientes en `REVISTAS/`. Abrí la **vista de grafo** (ícono de red en la barra lateral, o `Ctrl/Cmd+G`) para ver la constelación completa de autores, conceptos y números de la revista."}, {"id": "AUTORES/Severo Sarduy.md", "label": "Severo Sarduy", "group": "autor", "path": "AUTORES/Severo Sarduy.md", "degree": 14, "summary": "Narrador, poeta y ensayista cubano (1937–1993), radicado en París desde 1960 y vinculado al grupo de la revista *Tel Quel* y a la teoría estructuralista francesa; una de las figuras centrales del neobarroco hispanoamericano. En *Mundo Nuevo* combina creación —cuentos y relatos experimentales— con una serie de ensayos que aplican el estructuralismo y el psicoanálisis a la nueva novela, leyendo a Cortázar, Fuentes y Lezama Lima a través de Góngora, el barroco y el arte de vanguardia."}, {"id": "CONCEPTOS/Boom latinoamericano.md", "label": "Boom latinoamericano", "group": "concepto", "path": "CONCEPTOS/Boom latinoamericano.md", "degree": 14, "summary": "El *boom* latinoamericano designa el fenómeno literario, editorial y mediático que, entre mediados de la década de 1960 y comienzos de la de 1970, proyectó internacionalmente a un grupo reducido de novelistas en lengua española —principalmente Gabriel García Márquez, Mario Vargas Llosa, Julio Cortázar y Carlos Fuentes, junto a figuras como José Donoso o Guillermo Cabrera Infante— hacia una atención inédita en Europa y Estados Unidos. El fenómeno combinó una renovación formal profunda de la narrativa, heredera de las vanguardias europeas, el modernismo anglosajón y la nueva novela francesa, con condiciones materiales muy concretas: el auge de editoriales españolas como Seix Barral, la consolidación del agente literario como figura profesional, la multiplicación de traducciones y premios, y una demanda internacional de literatura latinoamericana estimulada por el interés —y la disputa política— que despertaba la Revolución cubana. Su misma denominación, tomada de la jerga del mercado editorial, dio origen a una controversia crítica persistente sobre si se trataba, ante todo, de una genuina renovación literaria o de una construcción publicitaria del aparato editorial."}, {"id": "CONCEPTOS/Compromiso vs. autonomía.md", "label": "Compromiso vs. autonomía", "group": "concepto", "path": "CONCEPTOS/Compromiso vs. autonomía.md", "degree": 15, "summary": "La díada compromiso / autonomía fue uno de los polos alrededor de los cuales se discutió más intensamente la función de los escritores a lo largo del siglo XX. Si el primero de ellos entendía que los creadores debían poner su obra a disposición de ciertos postulados políticos y morales, el segundo defendía la radical independencia de la obra de arte más allá de la búsqueda de la belleza entendida como un valor trascendente y no contingente. Esta tensión, heredera del debate sartreano sobre la *littérature engagée*, se agudizó durante la Guerra Fría, cuando la Revolución cubana —a través de instituciones como Casa de las Américas— exigía a los escritores un compromiso explícito con el proceso revolucionario, mientras que el Congreso por la Libertad de la Cultura promovía, en el bloque occidental, un arte formalmente autónomo y desligado de la política, funcional como contrapropaganda frente al «realismo socialista». *Mundo Nuevo*, financiada en última instancia por esta última red, quedó atrapada en el centro de esa disputa, oscilando entre la reivindicación de su independencia editorial y las acusaciones de servir a los intereses de uno de los bandos."}, {"id": "CONCEPTOS/Consagración y construcción del canon.md", "label": "Consagración y construcción del canon", "group": "concepto", "path": "CONCEPTOS/Consagración y construcción del canon.md", "degree": 12, "summary": "La consagración designa el proceso mediante el cual una obra o un autor son reconocidos como legítimos y valiosos dentro de un campo literario, a través de mecanismos como premios, traducciones, reseñas de prestigio o inclusión en colecciones editoriales selectas. Este proceso, estudiado por Pierre Bourdieu bajo la noción de capital simbólico, resulta clave para comprender cómo un conjunto acotado de novelistas fue elevado a la categoría de canon del *boom* latinoamericano, desplazando otras tradiciones narrativas (como el regionalismo o el indigenismo) a un lugar secundario. La consagración rara vez es un proceso neutro: como muestran las polémicas en torno a premios otorgados en pleno contexto de la Revolución cubana o de las dictaduras militares del Cono Sur, los mecanismos de legitimación literaria estuvieron con frecuencia atravesados por disputas ideológicas y geopolíticas, de modo que el mérito estético y el cálculo político resultan, en la práctica, difíciles de disociar."}, {"id": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "label": "Cosmopolitismo vs. localismo", "group": "concepto", "path": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "degree": 15, "summary": "Durante todo el siglo XX, la literatura hispanoamericana osciló entre las búsquedas estéticas abiertas a las vanguardias europeas y a los grandes centros culturales metropolitanos —París, Londres, Nueva York— y la reivindicación de las tradiciones, los paisajes y las problemáticas propiamente americanas, cristalizadas en el criollismo, el indigenismo y el regionalismo. El debate, que se remonta al arielismo de Rodó y a las polémicas de vanguardia de los años veinte y treinta —el cosmopolitismo porteño de Borges y el grupo *Martín Fierro* frente al nativismo de otros sectores—, resurgió con fuerza durante el auge de la nueva novela y el *boom*, cuyos autores fueron frecuentemente acusados de escribir «para la exportación» y de desatender la especificidad local en favor de un lenguaje y unas técnicas de raigambre europea o norteamericana."}, {"id": "CONCEPTOS/Función del escritor.md", "label": "Función del escritor", "group": "concepto", "path": "CONCEPTOS/Función del escritor.md", "degree": 12, "summary": "La discusión sobre la función del escritor abarca las distintas respuestas —muchas veces en tensión entre sí— a la pregunta por el lugar social y político que corresponde al intelectual creador: la del escritor como «espíritu independiente», ajeno a dogmas y consignas, tema explícito de los congresos del P.E.N. Club; la del escritor como figura pública, con responsabilidad moral ante la sociedad; la del profesional que debe negociar su oficio con las exigencias del mercado editorial; y la del intelectual comprometido, que subordina su obra a una causa política. A ello se suma, en el contexto latinoamericano, la condición frecuente del exilio —voluntario o forzado— como circunstancia que determina de modo decisivo las posibilidades materiales y simbólicas de la escritura."}, {"id": "CONCEPTOS/Guerra fría cultural.md", "label": "Guerra fría cultural", "group": "concepto", "path": "CONCEPTOS/Guerra fría cultural.md", "degree": 18, "summary": "La Guerra Fría cultural designa la disputa ideológica librada durante la segunda mitad del siglo XX a través de instituciones, revistas, congresos y redes culturales, en paralelo a la confrontación política y militar entre bloques. Organismos como el Congreso por la Libertad de la Cultura —financiado encubiertamente por la CIA, según se reveló en 1966-1967— promovieron publicaciones y encuentros intelectuales afines al bloque occidental, mientras la Unión Soviética y Cuba desplegaban sus propias estrategias de diplomacia cultural. La propia revista *Mundo Nuevo*, dirigida por Emir Rodríguez Monegal, estuvo en el centro de esta disputa al ser señalada por su financiamiento a través del Congreso por la Libertad de la Cultura."}, {"id": "CONCEPTOS/Mapa de conceptos.md", "label": "Mapa de conceptos", "group": "mapa", "path": "CONCEPTOS/Mapa de conceptos.md", "degree": 13, "summary": "Índice de las diez entradas del glosario. Cada nota contiene la definición, los ejemplos hallados en la revista y enlaces directos a los PDF recortados en `GLOSARIO/`. Abrí la **vista de grafo** (ícono de red en la barra lateral, o `Ctrl/Cmd+G`) para ver la constelación completa de conceptos y artículos."}, {"id": "CONCEPTOS/Mediación cultural.md", "label": "Mediación cultural", "group": "concepto", "path": "CONCEPTOS/Mediación cultural.md", "degree": 13, "summary": "La mediación cultural remite al conjunto de agentes e instituciones —traductores, editores, críticos, revistas, fundaciones— que facilitan la circulación de textos, prestigio y capital simbólico entre campos literarios nacionales o entre estos y el espacio literario internacional. En el marco de la Guerra Fría cultural, estos mediadores cumplieron un rol decisivo al tender puentes entre la producción latinoamericana y los circuitos de consagración europeos y norteamericanos, seleccionando, traduciendo y presentando autores ante públicos extranjeros. El traductor actúa como intérprete del texto extranjero; el editor y el agente literario gestionan su circulación comercial; y el crítico —función que *Mundo Nuevo*, bajo la dirección de Emir Rodríguez Monegal, ejerció de manera sistemática— fija su valor interpretativo y su lugar dentro del campo. Sin esta densa red de mediadores, la internacionalización del *boom* y de la nueva novela habría sido difícilmente concebible."}, {"id": "CONCEPTOS/Nueva novela latinoamericana.md", "label": "Nueva novela latinoamericana", "group": "concepto", "path": "CONCEPTOS/Nueva novela latinoamericana.md", "degree": 15, "summary": "La nueva novela latinoamericana designa la renovación formal y temática que, desde mediados del siglo XX, rompió con las convenciones del realismo decimonónico, el criollismo, el indigenismo y la novela regionalista o «de la tierra». Sus rasgos distintivos incluyen la experimentación con el lenguaje y la estructura temporal, la multiplicidad de voces y puntos de vista, el monólogo interior, la incorporación del mito y de lo real maravilloso, y un diálogo explícito con las vanguardias europeas, el modernismo anglosajón (Joyce, Faulkner) y, más tarde, el *nouveau roman* francés y el estructuralismo. A diferencia del *boom* —categoría más bien sociológica y editorial, ligada a la consagración internacional de un grupo acotado de autores—, la nueva novela es ante todo una categoría estético-crítica que en *Mundo Nuevo* aparece ya desde sus primeros números, antes incluso de que el término «boom» se popularizara, e incluye a autores no siempre asociados a este último, como Augusto Roa Bastos, Manuel Puig o Reinaldo Arenas."}, {"id": "CONCEPTOS/Redes intelectuales y circulación transnacional.md", "label": "Redes intelectuales y circulación transnacional", "group": "concepto", "path": "CONCEPTOS/Redes intelectuales y circulación transnacional.md", "degree": 10, "summary": "Las redes intelectuales refieren a los vínculos personales, epistolares, editoriales e institucionales que conectaron a escritores, críticos y editores de distintos países, permitiendo la circulación transnacional de textos, ideas y prestigio más allá de las fronteras nacionales. Congresos literarios, revistas culturales, becas y premios internacionales operaron como nodos de esta red, en la que revistas como *Mundo Nuevo* cumplieron un papel articulador entre los campos literarios latinoamericano, europeo y norteamericano. Estas redes fueron a la vez informales —amistades, correspondencias, círculos de sociabilidad heredados de generaciones anteriores— e institucionales, sostenidas por fundaciones filantrópicas norteamericanas (la Ford, la Rockefeller) y por organismos como el Congreso por la Libertad de la Cultura, cuyo financiamiento, en última instancia, hizo posible buena parte de la circulación internacional que la propia revista documentaba."}, {"id": "CONCEPTOS/Tradición vs. vanguardia.md", "label": "Tradición vs. vanguardia", "group": "concepto", "path": "CONCEPTOS/Tradición vs. vanguardia.md", "degree": 12, "summary": "La tensión entre tradición y vanguardia remite al conflicto entre la continuidad con las formas literarias heredadas —el realismo, el costumbrismo, la preceptiva de la novela decimonónica— y el impulso hacia la ruptura formal y la experimentación radical. En Hispanoamérica, el debate se remonta a las vanguardias históricas de los años veinte (el ultraísmo, el creacionismo, el estridentismo) y se reactiva con fuerza en los años sesenta, cuando la nueva novela reclama para sí una genealogía vanguardista —fragmentación temporal, *collage*, subversión del lenguaje— frente a quienes ven en ella una moda importada, ajena a la tradición narrativa continental, o bien denuncian el vanguardismo como una imitación servil y superficial de modelos extranjeros."}, {"id": "REVISTAS/Mundo Nuevo N°1 (julio 1966).pdf", "label": "N.º 1, julio de 1966", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°1 (julio 1966).pdf", "degree": 4, "summary": "", "issue": "1", "date": "julio 1966"}, {"id": "REVISTAS/Mundo Nuevo N°4.pdf", "label": "N.º 4, octubre de 1966", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°4.pdf", "degree": 3, "summary": "", "issue": null, "date": null}, {"id": "REVISTAS/Mundo Nuevo N°9 (marzo 1967).pdf", "label": "N.º 9, marzo de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°9 (marzo 1967).pdf", "degree": 2, "summary": "", "issue": "9", "date": "marzo 1967"}, {"id": "REVISTAS/Mundo Nuevo N°21 (marzo 1968).pdf", "label": "N.º 21, marzo de 1968", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°21 (marzo 1968).pdf", "degree": 2, "summary": "", "issue": "21", "date": "marzo 1968"}, {"id": "REVISTAS/Mundo Nuevo N°7.pdf", "label": "N.º 7, enero de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°7.pdf", "degree": 1, "summary": "", "issue": null, "date": null}, {"id": "REVISTAS/Mundo Nuevo N°13 (julio 1967).pdf", "label": "N.º 13, julio de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°13 (julio 1967).pdf", "degree": 7, "summary": "", "issue": "13", "date": "julio 1967"}, {"id": "REVISTAS/Mundo Nuevo N°17 (noviembre 1967).pdf", "label": "N.º 17, noviembre de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°17 (noviembre 1967).pdf", "degree": 3, "summary": "", "issue": "17", "date": "noviembre 1967"}, {"id": "REVISTAS/Mundo Nuevo N°19 (enero 1968).pdf", "label": "N.º 19, enero de 1968", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°19 (enero 1968).pdf", "degree": 5, "summary": "", "issue": "19", "date": "enero 1968"}, {"id": "REVISTAS/Mundo Nuevo N°2 (agosto 1966).pdf", "label": "N.º 2, agosto de 1966", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°2 (agosto 1966).pdf", "degree": 2, "summary": "", "issue": "2", "date": "agosto 1966"}, {"id": "REVISTAS/Mundo Nuevo N°24 (junio 1968).pdf", "label": "N.º 24, junio de 1968", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°24 (junio 1968).pdf", "degree": 3, "summary": "", "issue": "24", "date": "junio 1968"}, {"id": "REVISTAS/Mundo Nuevo N°3.pdf", "label": "N.º 3, septiembre de 1966", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°3.pdf", "degree": 2, "summary": "", "issue": null, "date": null}, {"id": "REVISTAS/Mundo Nuevo N°10 (abril 1967).pdf", "label": "N.º 10, abril de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°10 (abril 1967).pdf", "degree": 3, "summary": "", "issue": "10", "date": "abril 1967"}, {"id": "REVISTAS/Mundo Nuevo N°20 (febrero 1968).pdf", "label": "N.º 20, febrero de 1968", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°20 (febrero 1968).pdf", "degree": 5, "summary": "", "issue": "20", "date": "febrero 1968"}, {"id": "REVISTAS/Mundo Nuevo N°22 (abril 1968).pdf", "label": "N.º 22, abril de 1968", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°22 (abril 1968).pdf", "degree": 3, "summary": "", "issue": "22", "date": "abril 1968"}, {"id": "REVISTAS/Mundo Nuevo N°25 (julio 1968).pdf", "label": "N.º 25, julio de 1968", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°25 (julio 1968).pdf", "degree": 6, "summary": "", "issue": "25", "date": "julio 1968"}, {"id": "REVISTAS/Mundo Nuevo N°5.pdf", "label": "N.º 5, noviembre de 1966", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°5.pdf", "degree": 4, "summary": "", "issue": null, "date": null}, {"id": "REVISTAS/Mundo Nuevo N°6.pdf", "label": "N.º 6, diciembre de 1966", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°6.pdf", "degree": 2, "summary": "", "issue": null, "date": null}, {"id": "REVISTAS/Mundo Nuevo N°8.pdf", "label": "N.º 8, febrero de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°8.pdf", "degree": 2, "summary": "", "issue": null, "date": null}, {"id": "REVISTAS/Mundo Nuevo N°11 (mayo 1967).pdf", "label": "N.º 11, mayo de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°11 (mayo 1967).pdf", "degree": 3, "summary": "", "issue": "11", "date": "mayo 1967"}, {"id": "REVISTAS/Mundo Nuevo N°12 (junio 1967).pdf", "label": "N.º 12, junio de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°12 (junio 1967).pdf", "degree": 1, "summary": "", "issue": "12", "date": "junio 1967"}, {"id": "REVISTAS/Mundo Nuevo N°14 (agosto 1967).pdf", "label": "N.º 14, agosto de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°14 (agosto 1967).pdf", "degree": 3, "summary": "", "issue": "14", "date": "agosto 1967"}, {"id": "REVISTAS/Mundo Nuevo N°18 (diciembre 1967).pdf", "label": "N.º 18, diciembre de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°18 (diciembre 1967).pdf", "degree": 2, "summary": "", "issue": "18", "date": "diciembre 1967"}, {"id": "REVISTAS/Mundo Nuevo N°23 (mayo 1968).pdf", "label": "N.º 23, mayo de 1968", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°23 (mayo 1968).pdf", "degree": 2, "summary": "", "issue": "23", "date": "mayo 1968"}, {"id": "REVISTAS/Mundo Nuevo N°16 (octubre 1967).pdf", "label": "N.º 16, octubre de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°16 (octubre 1967).pdf", "degree": 2, "summary": "", "issue": "16", "date": "octubre 1967"}, {"id": "REVISTAS/Mundo Nuevo N°15 (septiembre 1967).pdf", "label": "N.º 15, septiembre de 1967", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°15 (septiembre 1967).pdf", "degree": 1, "summary": "", "issue": "15", "date": "septiembre 1967"}, {"id": "REVISTAS/Mundo Nuevo N°28 (octubre 1968).pdf", "label": "N.º 28, octubre de 1968", "group": "revista", "path": "REVISTAS/Mundo Nuevo N°28 (octubre 1968).pdf", "degree": 1, "summary": "", "issue": "28", "date": "octubre 1968"}, {"id": "GLOSARIO/BOOM LATINOAMERICANO/Hars, Luis - Cortázar o la cachetada metafísica.pdf", "label": "Hars — \"Cortázar o la cachetada metafísica\" (N.º 7)", "group": "articulo", "path": "GLOSARIO/BOOM LATINOAMERICANO/Hars, Luis - Cortázar o la cachetada metafísica.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/BOOM LATINOAMERICANO/Fuentes, Carlos - Rayuela, la novela como caja de Pandora.pdf", "label": "Fuentes — \"Rayuela: la novela como caja de Pandora\" (N.º 9)", "group": "articulo", "path": "GLOSARIO/BOOM LATINOAMERICANO/Fuentes, Carlos - Rayuela, la novela como caja de Pandora.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/BOOM LATINOAMERICANO/Rodríguez Monegal, Emir - Hipótesis sobre Alegría.pdf", "label": "Rodríguez Monegal — \"Hipótesis sobre Alegría\" (N.º 11)", "group": "articulo", "path": "GLOSARIO/BOOM LATINOAMERICANO/Rodríguez Monegal, Emir - Hipótesis sobre Alegría.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/BOOM LATINOAMERICANO/Donoso, José - El obsceno pájaro de la noche.pdf", "label": "Donoso — fragmento de \"El obsceno pájaro de la noche\" (N.º 13)", "group": "articulo", "path": "GLOSARIO/BOOM LATINOAMERICANO/Donoso, José - El obsceno pájaro de la noche.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/BOOM LATINOAMERICANO/Cabrera Infante, Guillermo - Tres tristes tigres.pdf", "label": "Cabrera Infante — fragmento de \"Tres tristes tigres\" (N.º 11)", "group": "articulo", "path": "GLOSARIO/BOOM LATINOAMERICANO/Cabrera Infante, Guillermo - Tres tristes tigres.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/BOOM LATINOAMERICANO/Nuevas publicaciones.pdf", "label": "\"Nuevas publicaciones\" (N.º 15)", "group": "articulo", "path": "GLOSARIO/BOOM LATINOAMERICANO/Nuevas publicaciones.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/BOOM LATINOAMERICANO/Consalvi, Simón Alberto - Un premio inobjetable.pdf", "label": "Consalvi — \"Un premio inobjetable\" (N.º 17)", "group": "articulo", "path": "GLOSARIO/BOOM LATINOAMERICANO/Consalvi, Simón Alberto - Un premio inobjetable.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Las reglas del juego.pdf", "label": "\"Las reglas del juego\" (N.º 5)", "group": "articulo", "path": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Las reglas del juego.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Ford, Aníbal - Los últimos cuentos de Cortázar.pdf", "label": "Ford — \"Los últimos cuentos de Cortázar\" (N.º 5)", "group": "articulo", "path": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Ford, Aníbal - Los últimos cuentos de Cortázar.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Rodríguez Monegal, Emir - El P.E.N. Club contra la guerra fría.pdf", "label": "Rodríguez Monegal — \"El P.E.N. Club contra la guerra fría\" (N.º 5)", "group": "articulo", "path": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Rodríguez Monegal, Emir - El P.E.N. Club contra la guerra fría.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Declaración de ILARI.pdf", "label": "\"Declaración de ILARI\" (N.º 13)", "group": "articulo", "path": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Declaración de ILARI.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Carrión, Ulises - Un libro peligroso y admirable.pdf", "label": "Carrión — \"Un libro peligroso y admirable\" (N.º 13)", "group": "articulo", "path": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Carrión, Ulises - Un libro peligroso y admirable.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Rodríguez Monegal, Emir - La CIA y los intelectuales.pdf", "label": "Rodríguez Monegal — \"La CIA y los intelectuales\" (N.º 14)", "group": "articulo", "path": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Rodríguez Monegal, Emir - La CIA y los intelectuales.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Andreu, Jean L. - Cortázar cuentista.pdf", "label": "Andreu — \"Cortázar cuentista\" (N.º 23)", "group": "articulo", "path": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Andreu, Jean L. - Cortázar cuentista.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Rodríguez Monegal, Emir - Una tarea cumplida.pdf", "label": "Rodríguez Monegal — \"Una tarea cumplida\" (N.º 25)", "group": "articulo", "path": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Rodríguez Monegal, Emir - Una tarea cumplida.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/México, El premio Villaurrutia.pdf", "label": "\"México: El premio Villaurrutia\" (N.º 9)", "group": "articulo", "path": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/México, El premio Villaurrutia.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Un premio para Fuentes.pdf", "label": "\"Un premio para Fuentes\" (N.º 11)", "group": "articulo", "path": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Un premio para Fuentes.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Rodríguez Monegal, Emir - Universalidad de Miguel Ángel Asturias.pdf", "label": "Rodríguez Monegal — \"Universalidad de Miguel Ángel Asturias\" (N.º 19)", "group": "articulo", "path": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Rodríguez Monegal, Emir - Universalidad de Miguel Ángel Asturias.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Un creador singular.pdf", "label": "\"Un creador singular\" (N.º 24)", "group": "articulo", "path": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Un creador singular.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Luchting, Wolfgang A. - El Perú en la vidriera.pdf", "label": "Luchting — \"El Perú en la vidriera\" (N.º 29)", "group": "articulo", "path": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Luchting, Wolfgang A. - El Perú en la vidriera.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Del Monte, Esteban - Trotes tras Tres tristes tigres.pdf", "label": "Del Monte — \"Trotes tras 'Tres tristes tigres'\" (N.º 21)", "group": "articulo", "path": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Del Monte, Esteban - Trotes tras Tres tristes tigres.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Premios y concursos.pdf", "label": "\"Premios y concursos\" (N.º 12)", "group": "articulo", "path": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Premios y concursos.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Fuentes, Carlos - Situación del escritor en América Latina.pdf", "label": "Fuentes — \"Situación del escritor en América Latina\" (N.º 1)", "group": "articulo", "path": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Fuentes, Carlos - Situación del escritor en América Latina.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Arias, Augusto - El cosmopolita, de Juan Montalvo.pdf", "label": "Arias — \"El cosmopolita, de Juan Montalvo\" (N.º 7)", "group": "articulo", "path": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Arias, Augusto - El cosmopolita, de Juan Montalvo.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Rodríguez Monegal, Emir - La novela brasileña.pdf", "label": "Rodríguez Monegal — \"La novela brasileña\" (N.º 6)", "group": "articulo", "path": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Rodríguez Monegal, Emir - La novela brasileña.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Zagury, Eliane - Graciliano Ramos, un clásico.pdf", "label": "Zagury — \"Graciliano Ramos, un clásico\" (N.º 9)", "group": "articulo", "path": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Zagury, Eliane - Graciliano Ramos, un clásico.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Núñez, Estuardo - Ciro Alegría, novelista de América.pdf", "label": "Núñez — \"Ciro Alegría, novelista de América\" (N.º 11)", "group": "articulo", "path": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Núñez, Estuardo - Ciro Alegría, novelista de América.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Hunneus, Cristián - ¿Existe la novela chilena.pdf", "label": "Hunneus — \"¿Existe la novela chilena?\" (N.º 11)", "group": "articulo", "path": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Hunneus, Cristián - ¿Existe la novela chilena.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Rodríguez Monegal, Emir - Universalidad de Miguel Ángel Asturias.pdf", "label": "Rodríguez Monegal — \"Universalidad de Miguel Ángel Asturias\" (N.º 19)", "group": "articulo", "path": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Rodríguez Monegal, Emir - Universalidad de Miguel Ángel Asturias.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Rodríguez Monegal, Emir - Diario del P.E.N. Club.pdf", "label": "Rodríguez Monegal — \"Diario del P.E.N. Club\" (N.º 4)", "group": "articulo", "path": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Rodríguez Monegal, Emir - Diario del P.E.N. Club.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Papel del escritor en América Latina.pdf", "label": "\"Papel del escritor en América Latina\" (N.º 5)", "group": "articulo", "path": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Papel del escritor en América Latina.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Borges en el P.E.N. Club.pdf", "label": "\"Borges en el P.E.N. Club\" (N.º 11)", "group": "articulo", "path": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Borges en el P.E.N. Club.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Ainsa, Fernando - Un realismo de la imaginación.pdf", "label": "Ainsa — \"Un realismo de la imaginación\" (N.º 11)", "group": "articulo", "path": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Ainsa, Fernando - Un realismo de la imaginación.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Verdugo, Iber H. - Perspectivas de la actual literatura hispanoamericana.pdf", "label": "Verdugo — \"Perspectivas de la actual literatura hispanoamericana\" (N.º 28)", "group": "articulo", "path": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Verdugo, Iber H. - Perspectivas de la actual literatura hispanoamericana.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Campodónico, Luis - Manuel de Falla y José Bergamín.pdf", "label": "Campodónico — \"Manuel de Falla y José Bergamín\" (N.º 25)", "group": "articulo", "path": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Campodónico, Luis - Manuel de Falla y José Bergamín.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Alsina Thevenet, H. - Escribir, Cómo y para quién.pdf", "label": "Alsina Thevenet — \"Escribir: ¿Cómo y para quién?\" (N.º 14)", "group": "articulo", "path": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Alsina Thevenet, H. - Escribir, Cómo y para quién.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/GUERRA FRÍA CULTURAL/Nisbet, Robert A. - El Plan Camelot, una autopsia.pdf", "label": "Nisbet — \"El Plan Camelot: una autopsia\" (N.º 9)", "group": "articulo", "path": "GLOSARIO/GUERRA FRÍA CULTURAL/Nisbet, Robert A. - El Plan Camelot, una autopsia.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/GUERRA FRÍA CULTURAL/Guerrillas en el Brasil.pdf", "label": "\"Guerrillas en el Brasil\" (N.º 9)", "group": "articulo", "path": "GLOSARIO/GUERRA FRÍA CULTURAL/Guerrillas en el Brasil.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/GUERRA FRÍA CULTURAL/Censura en el Perú.pdf", "label": "\"Censura en el Perú\" (N.º 9)", "group": "articulo", "path": "GLOSARIO/GUERRA FRÍA CULTURAL/Censura en el Perú.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/GUERRA FRÍA CULTURAL/Draper, Theodore - La crisis norteamericana.pdf", "label": "Draper — \"La crisis norteamericana\" (N.º 13)", "group": "articulo", "path": "GLOSARIO/GUERRA FRÍA CULTURAL/Draper, Theodore - La crisis norteamericana.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/GUERRA FRÍA CULTURAL/Checoslovaquia - El Manifiesto de las dos mil palabras.pdf", "label": "\"Checoslovaquia: El Manifiesto de las dos mil palabras\" (N.º 29)", "group": "articulo", "path": "GLOSARIO/GUERRA FRÍA CULTURAL/Checoslovaquia - El Manifiesto de las dos mil palabras.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/GUERRA FRÍA CULTURAL/Rodríguez Monegal, Emir - Quema de libros.pdf", "label": "Rodríguez Monegal — \"Quema de libros\" (N.º 20)", "group": "articulo", "path": "GLOSARIO/GUERRA FRÍA CULTURAL/Rodríguez Monegal, Emir - Quema de libros.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/GUERRA FRÍA CULTURAL/La guerra del Vietnam y los intelectuales.pdf", "label": "\"La guerra del Vietnam y los intelectuales\" (N.º 2)", "group": "articulo", "path": "GLOSARIO/GUERRA FRÍA CULTURAL/La guerra del Vietnam y los intelectuales.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/GUERRA FRÍA CULTURAL/Marichal, Juan - Vietnam, anverso y reversos.pdf", "label": "Marichal — \"Vietnam: anverso y reversos\" (N.º 4)", "group": "articulo", "path": "GLOSARIO/GUERRA FRÍA CULTURAL/Marichal, Juan - Vietnam, anverso y reversos.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/GUERRA FRÍA CULTURAL/Bosch, Juan - El porvenir de América Latina.pdf", "label": "Bosch — \"El porvenir de América Latina\" (N.º 13)", "group": "articulo", "path": "GLOSARIO/GUERRA FRÍA CULTURAL/Bosch, Juan - El porvenir de América Latina.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/GUERRA FRÍA CULTURAL/Brignardello, Luisa - Argentina, dos años de malas relaciones.pdf", "label": "Brignardello — \"Argentina: Dos años de malas relaciones\" (N.º 26-27)", "group": "articulo", "path": "GLOSARIO/GUERRA FRÍA CULTURAL/Brignardello, Luisa - Argentina, dos años de malas relaciones.pdf", "degree": 1, "summary": ""}, {"id": "glosario_mundo_nuevo.pdf", "label": "glosario_mundo_nuevo", "group": "documento", "path": "glosario_mundo_nuevo.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/MEDIACIÓN CULTURAL/Coindreau, Maurice Edgar - El goce de traducir.pdf", "label": "Coindreau — \"El goce de traducir\" (N.º 22)", "group": "articulo", "path": "GLOSARIO/MEDIACIÓN CULTURAL/Coindreau, Maurice Edgar - El goce de traducir.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/MEDIACIÓN CULTURAL/Vidal Buzzi, Fernando y Porrúa, Francisco - Un libro por un día.pdf", "label": "Vidal Buzzi y Porrúa — \"Un libro por un día\" (N.º 14)", "group": "articulo", "path": "GLOSARIO/MEDIACIÓN CULTURAL/Vidal Buzzi, Fernando y Porrúa, Francisco - Un libro por un día.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/MEDIACIÓN CULTURAL/Fernández Moreno, César - Crónica editorial de Jorge Álvarez.pdf", "label": "Fernández Moreno — \"Crónica editorial de Jorge Álvarez\" (N.º 8)", "group": "articulo", "path": "GLOSARIO/MEDIACIÓN CULTURAL/Fernández Moreno, César - Crónica editorial de Jorge Álvarez.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/MEDIACIÓN CULTURAL/Archocha, José Antonio - Un editor legendario.pdf", "label": "Archocha — \"Un editor legendario\" (N.º 25)", "group": "articulo", "path": "GLOSARIO/MEDIACIÓN CULTURAL/Archocha, José Antonio - Un editor legendario.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/MEDIACIÓN CULTURAL/Llorens, Vicente - Entre España y América.pdf", "label": "Llorens — \"Entre España y América\" (N.º 12)", "group": "articulo", "path": "GLOSARIO/MEDIACIÓN CULTURAL/Llorens, Vicente - Entre España y América.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Fuentes, Carlos - Situación del escritor en América Latina.pdf", "label": "Fuentes — \"Situación del escritor en América Latina\" (N.º 1)", "group": "articulo", "path": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Fuentes, Carlos - Situación del escritor en América Latina.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Sábato, Ernesto - Por una novelesca y metafísica.pdf", "label": "Sábato — \"Por una novelesca y metafísica\" (N.º 5)", "group": "articulo", "path": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Sábato, Ernesto - Por una novelesca y metafísica.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Luchting, Wolfgang A. - Crítica paralela, Vargas Llosa y Ribeyro.pdf", "label": "Luchting — \"Crítica paralela: Vargas Llosa y Ribeyro\" (N.º 11)", "group": "articulo", "path": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Luchting, Wolfgang A. - Crítica paralela, Vargas Llosa y Ribeyro.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Ainsa, Fernando - Un realismo de la imaginación.pdf", "label": "Ainsa — \"Un realismo de la imaginación\" (N.º 11)", "group": "articulo", "path": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Ainsa, Fernando - Un realismo de la imaginación.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Sarduy, Severo - Del Yin al Yang.pdf", "label": "Sarduy — \"Del Yin al Yang\" (N.º 13)", "group": "articulo", "path": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Sarduy, Severo - Del Yin al Yang.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Arenas, Reinaldo - Celestino antes del alba.pdf", "label": "Arenas — fragmento de \"Celestino antes del alba\" (N.º 21)", "group": "articulo", "path": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Arenas, Reinaldo - Celestino antes del alba.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Puig, Manuel - La traición de Rita Hayworth.pdf", "label": "Puig — fragmento de \"La traición de Rita Hayworth\" (N.º 10)", "group": "articulo", "path": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Puig, Manuel - La traición de Rita Hayworth.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Barthes, Roland - El árbol del crimen.pdf", "label": "Barthes — \"El árbol del crimen\" (N.º 16)", "group": "articulo", "path": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Barthes, Roland - El árbol del crimen.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/Caracas, Importante congreso.pdf", "label": "\"Caracas: Importante congreso\" (N.º 9)", "group": "articulo", "path": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/Caracas, Importante congreso.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/México, Congreso de escritores.pdf", "label": "\"México: Congreso de escritores\" (N.º 13)", "group": "articulo", "path": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/México, Congreso de escritores.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/Aguirre, Margarita - Pablo Neruda íntimo.pdf", "label": "Aguirre — \"Pablo Neruda íntimo\" (N.º 17)", "group": "articulo", "path": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/Aguirre, Margarita - Pablo Neruda íntimo.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/Fernández Moreno, César - Correo entre mis dos padres.pdf", "label": "Fernández Moreno — \"Correo entre mis dos padres\" (N.º 19)", "group": "articulo", "path": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/Fernández Moreno, César - Correo entre mis dos padres.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/América Latina desde Londres.pdf", "label": "\"América Latina desde Londres\" (N.º 9)", "group": "articulo", "path": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/América Latina desde Londres.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Sábato, Ernesto - Por una novelesca y metafísica.pdf", "label": "Sábato — \"Por una novelesca y metafísica\" (N.º 5)", "group": "articulo", "path": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Sábato, Ernesto - Por una novelesca y metafísica.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/La vieja nueva ola.pdf", "label": "\"La vieja nueva ola\" (N.º 6)", "group": "articulo", "path": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/La vieja nueva ola.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Luchting, Wolfgang A. - Crítica paralela, Vargas Llosa y Ribeyro.pdf", "label": "Luchting — \"Crítica paralela: Vargas Llosa y Ribeyro\" (N.º 11)", "group": "articulo", "path": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Luchting, Wolfgang A. - Crítica paralela, Vargas Llosa y Ribeyro.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Mac Adam, Alfred J. - Cortázar novelista.pdf", "label": "Mac Adam — \"Cortázar 'novelista'\" (N.º 18)", "group": "articulo", "path": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Mac Adam, Alfred J. - Cortázar novelista.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Ortega, Julio - Una poética de Trilce.pdf", "label": "Ortega — \"Una poética de Trilce\" (N.º 22)", "group": "articulo", "path": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Ortega, Julio - Una poética de Trilce.pdf", "degree": 1, "summary": ""}, {"id": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Iglesias, Ignacio - Novelas y novelistas de hoy.pdf", "label": "Iglesias — \"Novelas y novelistas de hoy\" (N.º 28)", "group": "articulo", "path": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Iglesias, Ignacio - Novelas y novelistas de hoy.pdf", "degree": 1, "summary": ""}], "edges": [{"source": "Revista Mundo Nuevo.md", "target": "CONCEPTOS/Mapa de conceptos.md"}, {"source": "Revista Mundo Nuevo.md", "target": "AUTORES/Mapa de autores.md"}, {"source": "AUTORES/Carlos Fuentes.md", "target": "REVISTAS/Mundo Nuevo N°1 (julio 1966).pdf"}, {"source": "AUTORES/Carlos Fuentes.md", "target": "REVISTAS/Mundo Nuevo N°4.pdf"}, {"source": "AUTORES/Carlos Fuentes.md", "target": "REVISTAS/Mundo Nuevo N°9 (marzo 1967).pdf"}, {"source": "AUTORES/Carlos Fuentes.md", "target": "REVISTAS/Mundo Nuevo N°21 (marzo 1968).pdf"}, {"source": "AUTORES/Carlos Fuentes.md", "target": "CONCEPTOS/Boom latinoamericano.md"}, {"source": "AUTORES/Carlos Fuentes.md", "target": "CONCEPTOS/Nueva novela latinoamericana.md"}, {"source": "AUTORES/Carlos Fuentes.md", "target": "CONCEPTOS/Cosmopolitismo vs. localismo.md"}, {"source": "AUTORES/Carlos Fuentes.md", "target": "CONCEPTOS/Guerra fría cultural.md"}, {"source": "AUTORES/Carlos Fuentes.md", "target": "AUTORES/Mapa de autores.md"}, {"source": "AUTORES/Cristián Huneeus.md", "target": "REVISTAS/Mundo Nuevo N°4.pdf"}, {"source": "AUTORES/Cristián Huneeus.md", "target": "REVISTAS/Mundo Nuevo N°7.pdf"}, {"source": "AUTORES/Cristián Huneeus.md", "target": "REVISTAS/Mundo Nuevo N°13 (julio 1967).pdf"}, {"source": "AUTORES/Cristián Huneeus.md", "target": "REVISTAS/Mundo Nuevo N°17 (noviembre 1967).pdf"}, {"source": "AUTORES/Cristián Huneeus.md", "target": "REVISTAS/Mundo Nuevo N°19 (enero 1968).pdf"}, {"source": "AUTORES/Cristián Huneeus.md", "target": "CONCEPTOS/Cosmopolitismo vs. localismo.md"}, {"source": "AUTORES/Cristián Huneeus.md", "target": "CONCEPTOS/Mediación cultural.md"}, {"source": "AUTORES/Cristián Huneeus.md", "target": "AUTORES/Mapa de autores.md"}, {"source": "AUTORES/César Fernández Moreno.md", "target": "REVISTAS/Mundo Nuevo N°1 (julio 1966).pdf"}, {"source": "AUTORES/César Fernández Moreno.md", "target": "REVISTAS/Mundo Nuevo N°2 (agosto 1966).pdf"}, {"source": "AUTORES/César Fernández Moreno.md", "target": "REVISTAS/Mundo Nuevo N°13 (julio 1967).pdf"}, {"source": "AUTORES/César Fernández Moreno.md", "target": "REVISTAS/Mundo Nuevo N°19 (enero 1968).pdf"}, {"source": "AUTORES/César Fernández Moreno.md", "target": "REVISTAS/Mundo Nuevo N°24 (junio 1968).pdf"}, {"source": "AUTORES/César Fernández Moreno.md", "target": "CONCEPTOS/Cosmopolitismo vs. localismo.md"}, {"source": "AUTORES/César Fernández Moreno.md", "target": "CONCEPTOS/Redes intelectuales y circulación transnacional.md"}, {"source": "AUTORES/César Fernández Moreno.md", "target": "AUTORES/Mapa de autores.md"}, {"source": "AUTORES/Elena de la Souchère.md", "target": "REVISTAS/Mundo Nuevo N°3.pdf"}, {"source": "AUTORES/Elena de la Souchère.md", "target": "REVISTAS/Mundo Nuevo N°10 (abril 1967).pdf"}, {"source": "AUTORES/Elena de la Souchère.md", "target": "REVISTAS/Mundo Nuevo N°20 (febrero 1968).pdf"}, {"source": "AUTORES/Elena de la Souchère.md", "target": "REVISTAS/Mundo Nuevo N°22 (abril 1968).pdf"}, {"source": "AUTORES/Elena de la Souchère.md", "target": "REVISTAS/Mundo Nuevo N°25 (julio 1968).pdf"}, {"source": "AUTORES/Elena de la Souchère.md", "target": "CONCEPTOS/Guerra fría cultural.md"}, {"source": "AUTORES/Elena de la Souchère.md", "target": "AUTORES/Mapa de autores.md"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°1 (julio 1966).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°3.pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°4.pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°5.pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°6.pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°8.pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°10 (abril 1967).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°11 (mayo 1967).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°12 (junio 1967).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°14 (agosto 1967).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°17 (noviembre 1967).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°18 (diciembre 1967).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°19 (enero 1968).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°20 (febrero 1968).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°21 (marzo 1968).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°22 (abril 1968).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°23 (mayo 1968).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°24 (junio 1968).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "REVISTAS/Mundo Nuevo N°25 (julio 1968).pdf"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "CONCEPTOS/Mediación cultural.md"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "CONCEPTOS/Consagración y construcción del canon.md"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "CONCEPTOS/Guerra fría cultural.md"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "CONCEPTOS/Función del escritor.md"}, {"source": "AUTORES/Emir Rodríguez Monegal.md", "target": "AUTORES/Mapa de autores.md"}, {"source": "AUTORES/Guillermo Cabrera Infante.md", "target": "REVISTAS/Mundo Nuevo N°13 (julio 1967).pdf"}, {"source": "AUTORES/Guillermo Cabrera Infante.md", "target": "REVISTAS/Mundo Nuevo N°14 (agosto 1967).pdf"}, {"source": "AUTORES/Guillermo Cabrera Infante.md", "target": "REVISTAS/Mundo Nuevo N°16 (octubre 1967).pdf"}, {"source": "AUTORES/Guillermo Cabrera Infante.md", "target": "REVISTAS/Mundo Nuevo N°20 (febrero 1968).pdf"}, {"source": "AUTORES/Guillermo Cabrera Infante.md", "target": "REVISTAS/Mundo Nuevo N°25 (julio 1968).pdf"}, {"source": "AUTORES/Guillermo Cabrera Infante.md", "target": "CONCEPTOS/Boom latinoamericano.md"}, {"source": "AUTORES/Guillermo Cabrera Infante.md", "target": "CONCEPTOS/Guerra fría cultural.md"}, {"source": "AUTORES/Guillermo Cabrera Infante.md", "target": "CONCEPTOS/Compromiso vs. autonomía.md"}, {"source": "AUTORES/Guillermo Cabrera Infante.md", "target": "AUTORES/Mapa de autores.md"}, {"source": "AUTORES/Ignacio Iglesias.md", "target": "REVISTAS/Mundo Nuevo N°5.pdf"}, {"source": "AUTORES/Ignacio Iglesias.md", "target": "REVISTAS/Mundo Nuevo N°9 (marzo 1967).pdf"}, {"source": "AUTORES/Ignacio Iglesias.md", "target": "REVISTAS/Mundo Nuevo N°11 (mayo 1967).pdf"}, {"source": "AUTORES/Ignacio Iglesias.md", "target": "REVISTAS/Mundo Nuevo N°13 (julio 1967).pdf"}, {"source": "AUTORES/Ignacio Iglesias.md", "target": "REVISTAS/Mundo Nuevo N°15 (septiembre 1967).pdf"}, {"source": "AUTORES/Ignacio Iglesias.md", "target": "REVISTAS/Mundo Nuevo N°19 (enero 1968).pdf"}, {"source": "AUTORES/Ignacio Iglesias.md", "target": "REVISTAS/Mundo Nuevo N°28 (octubre 1968).pdf"}, {"source": "AUTORES/Ignacio Iglesias.md", "target": "CONCEPTOS/Compromiso vs. autonomía.md"}, {"source": "AUTORES/Ignacio Iglesias.md", "target": "CONCEPTOS/Cosmopolitismo vs. localismo.md"}, {"source": "AUTORES/Ignacio Iglesias.md", "target": "AUTORES/Mapa de autores.md"}, {"source": "AUTORES/Joaquín Casalduero.md", "target": "REVISTAS/Mundo Nuevo N°13 (julio 1967).pdf"}, {"source": "AUTORES/Joaquín Casalduero.md", "target": "REVISTAS/Mundo Nuevo N°25 (julio 1968).pdf"}, {"source": "AUTORES/Joaquín Casalduero.md", "target": "CONCEPTOS/Tradición vs. vanguardia.md"}, {"source": "AUTORES/Joaquín Casalduero.md", "target": "AUTORES/Mapa de autores.md"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°5.pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°10 (abril 1967).pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°11 (mayo 1967).pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°13 (julio 1967).pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°14 (agosto 1967).pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°17 (noviembre 1967).pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°19 (enero 1968).pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°20 (febrero 1968).pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°22 (abril 1968).pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°23 (mayo 1968).pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "REVISTAS/Mundo Nuevo N°25 (julio 1968).pdf"}, {"source": "AUTORES/Julio Ortega.md", "target": "CONCEPTOS/Nueva novela latinoamericana.md"}, {"source": "AUTORES/Julio Ortega.md", "target": "CONCEPTOS/Tradición vs. vanguardia.md"}, {"source": "AUTORES/Julio Ortega.md", "target": "CONCEPTOS/Compromiso vs. autonomía.md"}, {"source": "AUTORES/Julio Ortega.md", "target": "AUTORES/Mapa de autores.md"}, {"source": "AUTORES/Mapa de autores.md", "target": "AUTORES/Severo Sarduy.md"}, {"source": "AUTORES/Mapa de autores.md", "target": "CONCEPTOS/Mapa de conceptos.md"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°1 (julio 1966).pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°2 (agosto 1966).pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°5.pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°6.pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°8.pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°13 (julio 1967).pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°16 (octubre 1967).pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°18 (diciembre 1967).pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°20 (febrero 1968).pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°24 (junio 1968).pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "REVISTAS/Mundo Nuevo N°25 (julio 1968).pdf"}, {"source": "AUTORES/Severo Sarduy.md", "target": "CONCEPTOS/Nueva novela latinoamericana.md"}, {"source": "AUTORES/Severo Sarduy.md", "target": "CONCEPTOS/Tradición vs. vanguardia.md"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "GLOSARIO/BOOM LATINOAMERICANO/Hars, Luis - Cortázar o la cachetada metafísica.pdf"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "GLOSARIO/BOOM LATINOAMERICANO/Fuentes, Carlos - Rayuela, la novela como caja de Pandora.pdf"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "GLOSARIO/BOOM LATINOAMERICANO/Rodríguez Monegal, Emir - Hipótesis sobre Alegría.pdf"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "GLOSARIO/BOOM LATINOAMERICANO/Donoso, José - El obsceno pájaro de la noche.pdf"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "GLOSARIO/BOOM LATINOAMERICANO/Cabrera Infante, Guillermo - Tres tristes tigres.pdf"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "GLOSARIO/BOOM LATINOAMERICANO/Nuevas publicaciones.pdf"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "GLOSARIO/BOOM LATINOAMERICANO/Consalvi, Simón Alberto - Un premio inobjetable.pdf"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "CONCEPTOS/Nueva novela latinoamericana.md"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "CONCEPTOS/Consagración y construcción del canon.md"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "CONCEPTOS/Cosmopolitismo vs. localismo.md"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "CONCEPTOS/Mediación cultural.md"}, {"source": "CONCEPTOS/Boom latinoamericano.md", "target": "CONCEPTOS/Mapa de conceptos.md"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Las reglas del juego.pdf"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Ford, Aníbal - Los últimos cuentos de Cortázar.pdf"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Rodríguez Monegal, Emir - El P.E.N. Club contra la guerra fría.pdf"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Declaración de ILARI.pdf"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Carrión, Ulises - Un libro peligroso y admirable.pdf"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Rodríguez Monegal, Emir - La CIA y los intelectuales.pdf"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Andreu, Jean L. - Cortázar cuentista.pdf"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "GLOSARIO/COMPROMISO VS. AUTONOMÍA/Rodríguez Monegal, Emir - Una tarea cumplida.pdf"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "CONCEPTOS/Guerra fría cultural.md"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "CONCEPTOS/Función del escritor.md"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "CONCEPTOS/Redes intelectuales y circulación transnacional.md"}, {"source": "CONCEPTOS/Compromiso vs. autonomía.md", "target": "CONCEPTOS/Mapa de conceptos.md"}, {"source": "CONCEPTOS/Consagración y construcción del canon.md", "target": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/México, El premio Villaurrutia.pdf"}, {"source": "CONCEPTOS/Consagración y construcción del canon.md", "target": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Un premio para Fuentes.pdf"}, {"source": "CONCEPTOS/Consagración y construcción del canon.md", "target": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Rodríguez Monegal, Emir - Universalidad de Miguel Ángel Asturias.pdf"}, {"source": "CONCEPTOS/Consagración y construcción del canon.md", "target": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Un creador singular.pdf"}, {"source": "CONCEPTOS/Consagración y construcción del canon.md", "target": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Luchting, Wolfgang A. - El Perú en la vidriera.pdf"}, {"source": "CONCEPTOS/Consagración y construcción del canon.md", "target": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Del Monte, Esteban - Trotes tras Tres tristes tigres.pdf"}, {"source": "CONCEPTOS/Consagración y construcción del canon.md", "target": "GLOSARIO/CONSAGRACIÓN Y CONSTRUCCIÓN DEL CANON/Premios y concursos.pdf"}, {"source": "CONCEPTOS/Consagración y construcción del canon.md", "target": "CONCEPTOS/Mediación cultural.md"}, {"source": "CONCEPTOS/Consagración y construcción del canon.md", "target": "CONCEPTOS/Cosmopolitismo vs. localismo.md"}, {"source": "CONCEPTOS/Consagración y construcción del canon.md", "target": "CONCEPTOS/Mapa de conceptos.md"}, {"source": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "target": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Fuentes, Carlos - Situación del escritor en América Latina.pdf"}, {"source": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "target": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Arias, Augusto - El cosmopolita, de Juan Montalvo.pdf"}, {"source": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "target": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Rodríguez Monegal, Emir - La novela brasileña.pdf"}, {"source": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "target": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Zagury, Eliane - Graciliano Ramos, un clásico.pdf"}, {"source": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "target": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Núñez, Estuardo - Ciro Alegría, novelista de América.pdf"}, {"source": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "target": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Hunneus, Cristián - ¿Existe la novela chilena.pdf"}, {"source": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "target": "GLOSARIO/COSMOPOLITISMO VS. LOCALISMO/Rodríguez Monegal, Emir - Universalidad de Miguel Ángel Asturias.pdf"}, {"source": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "target": "CONCEPTOS/Nueva novela latinoamericana.md"}, {"source": "CONCEPTOS/Cosmopolitismo vs. localismo.md", "target": "CONCEPTOS/Mapa de conceptos.md"}, {"source": "CONCEPTOS/Función del escritor.md", "target": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Rodríguez Monegal, Emir - Diario del P.E.N. Club.pdf"}, {"source": "CONCEPTOS/Función del escritor.md", "target": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Papel del escritor en América Latina.pdf"}, {"source": "CONCEPTOS/Función del escritor.md", "target": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Borges en el P.E.N. Club.pdf"}, {"source": "CONCEPTOS/Función del escritor.md", "target": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Ainsa, Fernando - Un realismo de la imaginación.pdf"}, {"source": "CONCEPTOS/Función del escritor.md", "target": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Verdugo, Iber H. - Perspectivas de la actual literatura hispanoamericana.pdf"}, {"source": "CONCEPTOS/Función del escritor.md", "target": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Campodónico, Luis - Manuel de Falla y José Bergamín.pdf"}, {"source": "CONCEPTOS/Función del escritor.md", "target": "GLOSARIO/FUNCIÓN DEL ESCRITOR/Alsina Thevenet, H. - Escribir, Cómo y para quién.pdf"}, {"source": "CONCEPTOS/Función del escritor.md", "target": "CONCEPTOS/Tradición vs. vanguardia.md"}, {"source": "CONCEPTOS/Función del escritor.md", "target": "CONCEPTOS/Mediación cultural.md"}, {"source": "CONCEPTOS/Función del escritor.md", "target": "CONCEPTOS/Mapa de conceptos.md"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "GLOSARIO/GUERRA FRÍA CULTURAL/Nisbet, Robert A. - El Plan Camelot, una autopsia.pdf"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "GLOSARIO/GUERRA FRÍA CULTURAL/Guerrillas en el Brasil.pdf"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "GLOSARIO/GUERRA FRÍA CULTURAL/Censura en el Perú.pdf"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "GLOSARIO/GUERRA FRÍA CULTURAL/Draper, Theodore - La crisis norteamericana.pdf"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "GLOSARIO/GUERRA FRÍA CULTURAL/Checoslovaquia - El Manifiesto de las dos mil palabras.pdf"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "GLOSARIO/GUERRA FRÍA CULTURAL/Rodríguez Monegal, Emir - Quema de libros.pdf"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "GLOSARIO/GUERRA FRÍA CULTURAL/La guerra del Vietnam y los intelectuales.pdf"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "GLOSARIO/GUERRA FRÍA CULTURAL/Marichal, Juan - Vietnam, anverso y reversos.pdf"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "GLOSARIO/GUERRA FRÍA CULTURAL/Bosch, Juan - El porvenir de América Latina.pdf"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "GLOSARIO/GUERRA FRÍA CULTURAL/Brignardello, Luisa - Argentina, dos años de malas relaciones.pdf"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "CONCEPTOS/Redes intelectuales y circulación transnacional.md"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "CONCEPTOS/Mediación cultural.md"}, {"source": "CONCEPTOS/Guerra fría cultural.md", "target": "CONCEPTOS/Mapa de conceptos.md"}, {"source": "CONCEPTOS/Mapa de conceptos.md", "target": "CONCEPTOS/Nueva novela latinoamericana.md"}, {"source": "CONCEPTOS/Mapa de conceptos.md", "target": "CONCEPTOS/Tradición vs. vanguardia.md"}, {"source": "CONCEPTOS/Mapa de conceptos.md", "target": "CONCEPTOS/Mediación cultural.md"}, {"source": "CONCEPTOS/Mapa de conceptos.md", "target": "CONCEPTOS/Redes intelectuales y circulación transnacional.md"}, {"source": "CONCEPTOS/Mapa de conceptos.md", "target": "glosario_mundo_nuevo.pdf"}, {"source": "CONCEPTOS/Mediación cultural.md", "target": "GLOSARIO/MEDIACIÓN CULTURAL/Coindreau, Maurice Edgar - El goce de traducir.pdf"}, {"source": "CONCEPTOS/Mediación cultural.md", "target": "GLOSARIO/MEDIACIÓN CULTURAL/Vidal Buzzi, Fernando y Porrúa, Francisco - Un libro por un día.pdf"}, {"source": "CONCEPTOS/Mediación cultural.md", "target": "GLOSARIO/MEDIACIÓN CULTURAL/Fernández Moreno, César - Crónica editorial de Jorge Álvarez.pdf"}, {"source": "CONCEPTOS/Mediación cultural.md", "target": "GLOSARIO/MEDIACIÓN CULTURAL/Archocha, José Antonio - Un editor legendario.pdf"}, {"source": "CONCEPTOS/Mediación cultural.md", "target": "GLOSARIO/MEDIACIÓN CULTURAL/Llorens, Vicente - Entre España y América.pdf"}, {"source": "CONCEPTOS/Mediación cultural.md", "target": "CONCEPTOS/Redes intelectuales y circulación transnacional.md"}, {"source": "CONCEPTOS/Nueva novela latinoamericana.md", "target": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Fuentes, Carlos - Situación del escritor en América Latina.pdf"}, {"source": "CONCEPTOS/Nueva novela latinoamericana.md", "target": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Sábato, Ernesto - Por una novelesca y metafísica.pdf"}, {"source": "CONCEPTOS/Nueva novela latinoamericana.md", "target": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Luchting, Wolfgang A. - Crítica paralela, Vargas Llosa y Ribeyro.pdf"}, {"source": "CONCEPTOS/Nueva novela latinoamericana.md", "target": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Ainsa, Fernando - Un realismo de la imaginación.pdf"}, {"source": "CONCEPTOS/Nueva novela latinoamericana.md", "target": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Sarduy, Severo - Del Yin al Yang.pdf"}, {"source": "CONCEPTOS/Nueva novela latinoamericana.md", "target": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Arenas, Reinaldo - Celestino antes del alba.pdf"}, {"source": "CONCEPTOS/Nueva novela latinoamericana.md", "target": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Puig, Manuel - La traición de Rita Hayworth.pdf"}, {"source": "CONCEPTOS/Nueva novela latinoamericana.md", "target": "GLOSARIO/NUEVA NOVELA LATINOAMERICANA/Barthes, Roland - El árbol del crimen.pdf"}, {"source": "CONCEPTOS/Nueva novela latinoamericana.md", "target": "CONCEPTOS/Tradición vs. vanguardia.md"}, {"source": "CONCEPTOS/Redes intelectuales y circulación transnacional.md", "target": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/Caracas, Importante congreso.pdf"}, {"source": "CONCEPTOS/Redes intelectuales y circulación transnacional.md", "target": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/México, Congreso de escritores.pdf"}, {"source": "CONCEPTOS/Redes intelectuales y circulación transnacional.md", "target": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/Aguirre, Margarita - Pablo Neruda íntimo.pdf"}, {"source": "CONCEPTOS/Redes intelectuales y circulación transnacional.md", "target": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/Fernández Moreno, César - Correo entre mis dos padres.pdf"}, {"source": "CONCEPTOS/Redes intelectuales y circulación transnacional.md", "target": "GLOSARIO/REDES INTELECTUALES Y CIRCULACIÓN TRANSNACIONAL/América Latina desde Londres.pdf"}, {"source": "CONCEPTOS/Tradición vs. vanguardia.md", "target": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Sábato, Ernesto - Por una novelesca y metafísica.pdf"}, {"source": "CONCEPTOS/Tradición vs. vanguardia.md", "target": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/La vieja nueva ola.pdf"}, {"source": "CONCEPTOS/Tradición vs. vanguardia.md", "target": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Luchting, Wolfgang A. - Crítica paralela, Vargas Llosa y Ribeyro.pdf"}, {"source": "CONCEPTOS/Tradición vs. vanguardia.md", "target": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Mac Adam, Alfred J. - Cortázar novelista.pdf"}, {"source": "CONCEPTOS/Tradición vs. vanguardia.md", "target": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Ortega, Julio - Una poética de Trilce.pdf"}, {"source": "CONCEPTOS/Tradición vs. vanguardia.md", "target": "GLOSARIO/TRADICIÓN VS. VANGUARDIA/Iglesias, Ignacio - Novelas y novelistas de hoy.pdf"}]};
+
+const GROUP_META = {
+  hub:        { label:'Nota central',            color:'var(--c-index)',    key:'idx' },
+  mapa:       { label:'Índice',                  color:'var(--c-index)',    key:'idx' },
+  autor:      { label:'Autor',                   color:'var(--c-autor)',    key:'autor' },
+  concepto:   { label:'Concepto',                color:'var(--c-concepto)', key:'concepto' },
+  revista:    { label:'Número de la revista',     color:'var(--muted)',      key:'campo' },
+  articulo:   { label:'Artículo citado',         color:'var(--muted)',      key:'campo' },
+  documento:  { label:'Documento',               color:'var(--muted)',      key:'campo' },
+};
+const FILTER_GROUPS = [
+  { key:'idx',      label:'Índice',    color:'var(--c-index)' },
+  { key:'autor',    label:'Autores',   color:'var(--c-autor)' },
+  { key:'concepto', label:'Conceptos', color:'var(--c-concepto)' },
+  { key:'campo',    label:'Números y artículos', color:'var(--muted)' },
+];
+const PDF_GROUPS = new Set(['revista','articulo','documento']);
+
+function resolveVar(v){
+  return getComputedStyle(document.documentElement).getPropertyValue(v.replace('var(','').replace(')','')).trim() || v;
+}
+
+function pdfHref(d){
+  if (!PDF_GROUPS.has(d.group) || !d.path) return null;
+  return 'documentos/' + d.path.split('/').map(encodeURIComponent).join('/');
+}
+
+(function init(){
+  const nodes = GRAPH_DATA.nodes.map(d => Object.assign({}, d));
+  const edgesRaw = GRAPH_DATA.edges;
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const neighbors = new Map(nodes.map(n => [n.id, new Set()]));
+  const incident = new Map(nodes.map(n => [n.id, []]));
+  edgesRaw.forEach((e,i) => {
+    neighbors.get(e.source).add(e.target);
+    neighbors.get(e.target).add(e.source);
+    incident.get(e.source).push(i);
+    incident.get(e.target).push(i);
+  });
+
+  document.getElementById('stats').textContent = `${nodes.length} nodos · ${edgesRaw.length} conexiones`;
+
+  const maxDegreeMain = d3.max(nodes, d => (d.group==='autor'||d.group==='concepto') ? d.degree : 0) || 1;
+  const maxDegreeField = d3.max(nodes, d => (d.group==='revista'||d.group==='articulo'||d.group==='documento') ? d.degree : 0) || 1;
+  const rScaleMain = d3.scaleSqrt().domain([0, maxDegreeMain]).range([7, 21]);
+  const rScaleField = d3.scaleSqrt().domain([0, maxDegreeField]).range([2, 8]);
+  function radiusOf(d){
+    if (d.group === 'hub') return 26;
+    if (d.group === 'mapa') return 17;
+    if (d.group === 'autor' || d.group === 'concepto') return rScaleMain(d.degree);
+    return Math.max(2, rScaleField(d.degree));
+  }
+  function colorOf(d){ return resolveVar(GROUP_META[d.group].color); }
+
+  const stage = document.getElementById('stage');
+  const svg = d3.select('#graph');
+  const gZoom = svg.append('g');
+  const gLinks = gZoom.append('g').attr('class','links');
+  const gNodes = gZoom.append('g').attr('class','nodes');
+  const gLabels = gZoom.append('g').attr('class','labels');
+
+  let width = stage.clientWidth, height = stage.clientHeight;
+
+  const angleFor = { hub:0, mapa:1, autor:2, concepto:3, revista:4, articulo:5, documento:4 };
+  const radiusFor = { hub:0, mapa:0.18, autor:0.42, concepto:0.42, revista:0.78, articulo:0.9, documento:0.78 };
+  nodes.forEach((n,i) => {
+    if (n.group === 'hub'){ n.x = width/2; n.y = height/2; return; }
+    const bucket = angleFor[n.group] ?? 4;
+    const within = nodes.filter(m => (angleFor[m.group]??4) === bucket);
+    const idx = within.indexOf(n);
+    const a = (idx / Math.max(1,within.length)) * Math.PI * 2 + bucket;
+    const r = radiusFor[n.group] * Math.min(width,height) * 0.48;
+    n.x = width/2 + Math.cos(a) * r;
+    n.y = height/2 + Math.sin(a) * r;
+  });
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edgesRaw).id(d => d.id).distance(l => {
+      const a = byId.get(typeof l.source==='object'?l.source.id:l.source);
+      const b = byId.get(typeof l.target==='object'?l.target.id:l.target);
+      const g = [a.group,b.group];
+      if (g.includes('hub')) return 130;
+      if (g.includes('mapa')) return 90;
+      return 34;
+    }).strength(0.5))
+    .force('charge', d3.forceManyBody().strength(d => d.group==='hub'?-900: d.group==='mapa'?-500: d.group==='autor'||d.group==='concepto' ? -140 : -18).distanceMax(420))
+    .force('collide', d3.forceCollide().radius(d => radiusOf(d) + 3))
+    .force('center', d3.forceCenter(width/2, height/2))
+    .force('x', d3.forceX(width/2).strength(0.02))
+    .force('y', d3.forceY(height/2).strength(0.02));
+
+  const link = gLinks.selectAll('line').data(edgesRaw).join('line')
+    .attr('class','link-line')
+    .attr('stroke-width', 1);
+
+  const node = gNodes.selectAll('circle').data(nodes).join('circle')
+    .attr('class','node-dot')
+    .attr('r', radiusOf)
+    .attr('fill', colorOf)
+    .call(drag(sim));
+
+  const label = gLabels.selectAll('text').data(nodes.filter(n => n.group==='hub' || n.group==='mapa' || n.group==='autor' || n.group==='concepto')).join('text')
+    .attr('class','node-label')
+    .text(d => d.label)
+    .attr('text-anchor','middle')
+    .attr('dy', d => -(radiusOf(d)+6));
+
+  node.append('title').text(d => `${d.label} — ${GROUP_META[d.group].label}`);
+
+  function tick(){
+    link.attr('x1', d=>d.source.x).attr('y1', d=>d.source.y).attr('x2', d=>d.target.x).attr('y2', d=>d.target.y);
+    node.attr('cx', d=>d.x).attr('cy', d=>d.y);
+    label.attr('x', d=>d.x).attr('y', d=>d.y);
+  }
+  sim.on('tick', tick);
+  if (reduceMotion){
+    sim.stop();
+    for (let i=0;i<400;i++) sim.tick();
+    tick();
+  }
+
+  const zoom = d3.zoom().scaleExtent([0.25, 4]).on('zoom', (ev) => gZoom.attr('transform', ev.transform));
+  svg.call(zoom);
+
+  function centerOn(d, scale){
+    const t = d3.zoomTransform(svg.node());
+    const s = scale || Math.max(t.k, 1.1);
+    const tx = width/2 - d.x*s;
+    const ty = height/2 - d.y*s;
+    svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(tx,ty).scale(s));
+  }
+
+  // ---- selection / panel ----
+  const panel = document.getElementById('panel');
+  let activeId = null;
+
+  function clearSelection(){
+    activeId = null;
+    node.classed('dim', false);
+    link.classed('dim', false).classed('active-link', false);
+    label.classed('dim', false);
+    panel.classList.remove('open');
+  }
+
+  function connRow(otherId){
+    const o = byId.get(otherId);
+    const meta = GROUP_META[o.group];
+    const btn = document.createElement('button');
+    btn.className = 'conn';
+    btn.innerHTML = `<span class="dot" style="background:${resolveVar(meta.color)}"></span><span class="lbl"></span><span class="g">${meta.label}</span>`;
+    btn.querySelector('.lbl').textContent = o.label;
+    btn.addEventListener('click', () => selectNode(otherId, true));
+    return btn;
+  }
+
+  function selectNode(id, fromPanel){
+    const d = byId.get(id);
+    if (!d) return;
+    activeId = id;
+    const nb = neighbors.get(id);
+    node.classed('dim', n => n.id !== id && !nb.has(n.id));
+    label.classed('dim', n => n.id !== id && !nb.has(n.id));
+    link.classed('dim', l => l.source.id !== id && l.target.id !== id)
+        .classed('active-link', l => l.source.id === id || l.target.id === id);
+
+    const meta = GROUP_META[d.group];
+    document.getElementById('p-dot').style.background = resolveVar(meta.color);
+    document.getElementById('p-type').textContent = meta.label.toUpperCase();
+    document.getElementById('p-title').textContent = d.label;
+
+    const pdfEl = document.getElementById('p-pdf');
+    const href = pdfHref(d);
+    if (href){ pdfEl.href = href; pdfEl.hidden = false; }
+    else { pdfEl.hidden = true; }
+
+    const summaryEl = document.getElementById('p-summary');
+    if (d.summary){ summaryEl.style.display=''; summaryEl.textContent = d.summary; }
+    else { summaryEl.style.display='none'; }
+    const connTitle = document.getElementById('p-conn-title');
+    const ids = Array.from(nb);
+    connTitle.textContent = `Conexiones (${ids.length})`;
+    const list = document.getElementById('p-conn');
+    list.innerHTML = '';
+    ids.sort((a,b) => byId.get(b).degree - byId.get(a).degree);
+    ids.forEach(oid => { const li = document.createElement('li'); li.appendChild(connRow(oid)); list.appendChild(li); });
+    panel.classList.add('open');
+    if (!fromPanel) centerOn(d);
+  }
+
+  node.on('click', (ev,d) => { ev.stopPropagation(); selectNode(d.id); });
+  svg.on('click', () => clearSelection());
+  document.getElementById('p-close').addEventListener('click', clearSelection);
+
+  // hover tooltip (desktop)
+  const tip = document.getElementById('tooltip');
+  node.on('mousemove', (ev,d) => {
+    tip.style.left = ev.clientX + 'px';
+    tip.style.top = ev.clientY + 'px';
+    tip.textContent = `${d.label} · ${GROUP_META[d.group].label}`;
+    tip.style.opacity = 1;
+  }).on('mouseleave', () => tip.style.opacity = 0);
+
+  function drag(sim){
+    function started(ev,d){ if(!ev.active) sim.alphaTarget(0.25).restart(); d.fx=d.x; d.fy=d.y; }
+    function dragged(ev,d){ d.fx=ev.x; d.fy=ev.y; }
+    function ended(ev,d){ if(!ev.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }
+    return d3.drag().on('start',started).on('drag',dragged).on('end',ended);
+  }
+
+  // ---- legend / filters ----
+  const activeFilters = new Set(FILTER_GROUPS.map(f => f.key));
+  const legend = document.getElementById('legend');
+  FILTER_GROUPS.forEach(f => {
+    const count = nodes.filter(n => GROUP_META[n.group].key === f.key).length;
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    chip.setAttribute('aria-pressed','true');
+    chip.innerHTML = `<span class="dot" style="background:${resolveVar(f.color)}"></span><span></span><span class="n">${count}</span>`;
+    chip.querySelector('span:nth-child(2)').textContent = f.label;
+    chip.addEventListener('click', () => {
+      const on = chip.getAttribute('aria-pressed') === 'true';
+      chip.setAttribute('aria-pressed', on ? 'false':'true');
+      if (on) activeFilters.delete(f.key); else activeFilters.add(f.key);
+      applyFilters();
+    });
+    legend.appendChild(chip);
+  });
+  function applyFilters(){
+    node.style('display', d => activeFilters.has(GROUP_META[d.group].key) ? null : 'none');
+    label.style('display', d => activeFilters.has(GROUP_META[d.group].key) ? null : 'none');
+    link.style('display', l => {
+      const a = GROUP_META[byId.get(l.source.id||l.source).group].key;
+      const b = GROUP_META[byId.get(l.target.id||l.target).group].key;
+      return (activeFilters.has(a) && activeFilters.has(b)) ? null : 'none';
+    });
+  }
+
+  // ---- search ----
+  const searchInput = document.getElementById('search');
+  const suggest = document.getElementById('suggest');
+  function norm(s){ return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+  searchInput.addEventListener('input', () => {
+    const q = norm(searchInput.value.trim());
+    suggest.innerHTML = '';
+    if (!q){ suggest.hidden = true; return; }
+    const matches = nodes.filter(n => norm(n.label).includes(q)).sort((a,b)=>b.degree-a.degree).slice(0,8);
+    if (!matches.length){ suggest.hidden = true; return; }
+    matches.forEach(m => {
+      const b = document.createElement('button');
+      b.innerHTML = `${m.label}<span class="g">${GROUP_META[m.group].label}</span>`;
+      b.addEventListener('click', () => {
+        showView('graph');
+        selectNode(m.id);
+        suggest.hidden = true;
+        searchInput.value = m.label;
+      });
+      suggest.appendChild(b);
+    });
+    suggest.hidden = false;
+  });
+  document.addEventListener('click', (ev) => { if (!ev.target.closest('.searchwrap')) suggest.hidden = true; });
+
+  // ---- view toggle ----
+  const segButtons = document.querySelectorAll('.seg button');
+  function showView(view){
+    segButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+    document.getElementById('stage').classList.toggle('hide', view !== 'graph');
+    document.getElementById('indexView').classList.toggle('show', view === 'index');
+    document.getElementById('hint').style.visibility = view === 'graph' ? 'visible' : 'hidden';
+  }
+  segButtons.forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+
+  // ---- index view content ----
+  function buildIndex(group, elId){
+    const el = document.getElementById(elId);
+    const items = nodes.filter(n => n.group === group).sort((a,b) => b.degree - a.degree);
+    items.forEach(d => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.className = 'idx-item';
+      btn.innerHTML = `<span class="dot" style="background:${colorOf(d)}"></span><span class="t"></span><span class="n">${d.degree}</span>`;
+      btn.querySelector('.t').textContent = d.label;
+      btn.addEventListener('click', () => { showView('graph'); selectNode(d.id); });
+      li.appendChild(btn);
+      el.appendChild(li);
+    });
+  }
+  buildIndex('autor','idx-autores');
+  buildIndex('concepto','idx-conceptos');
+  const nRev = nodes.filter(n=>GROUP_META[n.group].key==='campo').length;
+  document.getElementById('idx-note').textContent = `+ ${nRev} números y artículos citados de la revista, visibles como estrellas de campo en la vista de grafo.`;
+
+  // ---- decorative starfield ----
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+  function paintStars(){
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width*dpr; canvas.height = height*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,width,height);
+    const inkColor = getComputedStyle(document.documentElement).getPropertyValue('--ink-2').trim();
+    ctx.fillStyle = inkColor;
+    const n = Math.round((width*height)/9000);
+    let seed = 42;
+    function rnd(){ seed = (seed*1103515245+12345) & 0x7fffffff; return seed/0x7fffffff; }
+    for (let i=0;i<n;i++){
+      const x = rnd()*width, y = rnd()*height, r = rnd()*1.1+0.2;
+      ctx.globalAlpha = rnd()*0.35+0.05;
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  paintStars();
+
+  // ---- resize ----
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      width = stage.clientWidth; height = stage.clientHeight;
+      sim.force('center', d3.forceCenter(width/2, height/2));
+      sim.force('x', d3.forceX(width/2).strength(0.02));
+      sim.force('y', d3.forceY(height/2).strength(0.02));
+      sim.alpha(0.3).restart();
+      paintStars();
+    }, 200);
+  });
+
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') clearSelection(); });
+})();
+</script>
+</body>
+</html>
