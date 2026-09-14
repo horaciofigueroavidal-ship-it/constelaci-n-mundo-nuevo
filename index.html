@@ -598,15 +598,15 @@ function pdfHref(d){
       const a = byId.get(typeof l.source==='object'?l.source.id:l.source);
       const b = byId.get(typeof l.target==='object'?l.target.id:l.target);
       const g = [a.group,b.group];
-      if (g.includes('hub')) return 130;
-      if (g.includes('mapa')) return 90;
-      return 34;
-    }).strength(0.5))
-    .force('charge', d3.forceManyBody().strength(d => d.group==='hub'?-900: d.group==='mapa'?-500: d.group==='autor'||d.group==='concepto' ? -140 : -18).distanceMax(420))
-    .force('collide', d3.forceCollide().radius(d => radiusOf(d) + 3))
+      if (g.includes('hub')) return 210;
+      if (g.includes('mapa')) return 150;
+      return 70;
+    }).strength(0.35))
+    .force('charge', d3.forceManyBody().strength(d => d.group==='hub'?-1400: d.group==='mapa'?-900: d.group==='autor'||d.group==='concepto' ? -320 : -70).distanceMax(560))
+    .force('collide', d3.forceCollide().radius(d => radiusOf(d) + 14).strength(0.9))
     .force('center', d3.forceCenter(width/2, height/2))
-    .force('x', d3.forceX(width/2).strength(0.02))
-    .force('y', d3.forceY(height/2).strength(0.02));
+    .force('x', d3.forceX(width/2).strength(0.035))
+    .force('y', d3.forceY(height/2).strength(0.035));
 
   const link = gLinks.selectAll('line').data(edgesRaw).join('line')
     .attr('class','link-line')
@@ -839,8 +839,8 @@ function pdfHref(d){
     resizeTimer = setTimeout(() => {
       width = stage.clientWidth; height = stage.clientHeight;
       sim.force('center', d3.forceCenter(width/2, height/2));
-      sim.force('x', d3.forceX(width/2).strength(0.02));
-      sim.force('y', d3.forceY(height/2).strength(0.02));
+      sim.force('x', d3.forceX(width/2).strength(0.035));
+      sim.force('y', d3.forceY(height/2).strength(0.035));
       sim.alpha(0.3).restart();
       paintStars();
     }, 200);
